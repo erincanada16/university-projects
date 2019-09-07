@@ -1,0 +1,370 @@
+---
+title: "Final_Project_BillboardTop100"
+author: "Erin Canada"
+date: "April 27, 2017"
+output: pdf_document
+---
+
+```{r setup, include=TRUE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+##functions I created that will be used in analysis(I wanted to make more but ran out of time to make sure everything was in place)
+
+#group by year, specifically for music.data
+
+sep.year <- function(my.data, year) {
+  year <- which(my.data[,4] == year)  
+}
+
+
+
+#function for finding the average length of song per year
+##make sure sep.year, my.data, num.lyrics are establish
+find.avgsong.length <- function (year){
+  avg.length <- c()
+  year1 <- sep.year(my.data, year)
+  for(i in seq_along(year1)) {
+    avg.length[i] <- num.lyrics[year1[i]]
+    
+    }
+  
+  #finding the number of nas to have correct average
+  nas <-sum(is.na(avg.length))
+  
+  #average song length per year, with no NAs
+  avg <-sum(avg.length, na.rm = TRUE)
+  
+  #number of songs per cycle - the number of nas found in data
+  no.nas <- 100-nas
+  
+  #Finally
+  avg.length.song <- round(avg/no.nas, digits = 0)
+  return(avg.length.song)
+} 
+
+
+
+#install.packages("tm",repose = 'http://cran.us.r-project.org')
+#install.packages("SnowballC",repose = 'http://cran.us.r-project.org',repose = 'http://cran.us.r-project.org')
+#install.packages("wordcloud",repose = 'http://cran.us.r-project.org')
+#install.packages("RColorBrewer",repose = 'http://cran.us.r-project.org')
+#install.packages("wordcloud2",repose = 'http://cran.us.r-project.org')
+#library(stringr)
+#library(plyr)
+#library(ggplot2)
+#library(tm)
+#library(SnowballC)
+#library(wordcloud)
+#library(RColorBrewer)
+#library(wordcloud2)
+
+
+#loading data for Billboards Top Yearly Songs from the past 50 years
+music.data <- read.csv("https://raw.githubusercontent.com/walkerkq/musiclyrics/master/billboard_lyrics_1964-2015.csv", stringsAsFactors = FALSE)  
+
+
+
+```
+
+#What makes a song's lyrics most popular?
+
+```{r lyrics, echo = TRUE, eval = FALSE}
+##https://www.kaggle.com/rakannimer/billboard-lyrics
+#Number of Lyrics per song
+  #for every row under lyrics column, sum of each row
+  num.lyrics<- c()
+  lyrics <- c()
+  for(i in seq_along(music.data[,5])) {
+    lyrics[i] <- strsplit(music.data[i,5], " ")
+    #IF less than five items, lyrics are not found
+    if (length(lyrics[[i]]) < 5) {
+      num.lyrics[i] <- NA
+    }
+    else{
+      num.lyrics[i] <- length(lyrics[[i]])
+    }
+      
+  }
+  
+  head(num.lyrics)
+  
+my.data <- cbind(music.data, num.lyrics)
+
+#Average song length per year
+year <- 1965
+avg.length.peryear <- c()
+each.year <- c(1965:2015)
+for(i in 1:51){
+  avg.length.peryear[i] <- find.avgsong.length(year)
+  year <- year + 1
+}
+year.breakdown <- as.data.frame(cbind(each.year,avg.length.peryear))
+
+
+#Renaming Column names for year.breakdown
+names(year.breakdown)[names(year.breakdown)=="each.year"] <- "Year"
+names(year.breakdown)[names(year.breakdown)=="avg.length.peryear"] <- "Average song Length"
+
+
+#Average Song Length Per Year Graph
+ggplot(data = year.breakdown) +
+  geom_point(aes(x = Year, y = `Average song Length`), color = year.breakdown$Year)+
+  ggtitle("Average Song Length Per Year")
+
+
+#Specific Words past decades#not enough time
+
+
+
+#Specific Words, most occuring per year, past 50 years
+
+#combine all lyrics/frequency in one data frame for past 50 years
+control <- data.frame()
+for(i in seq_along(lyrics)) {
+  if(i >= 2) {
+    temp <- as.data.frame(table(lyrics[i]))
+    control <- rbind(control,temp)
+  }else{
+    control <- as.data.frame(table(lyrics[i]), stringsAsFactors = FALSE)
+   }
+}
+  
+
+#Removing unnecessary words
+removed.duplicates <- control
+removed.duplicates <- removed.duplicates[order(removed.duplicates$Var),]
+#removing spaces,numbers and the word a, and extras
+removed.duplicates <- removed.duplicates[!grepl("^you$", removed.duplicates$Var1),]
+removed.duplicates <- removed.duplicates[!grepl("^the$", removed.duplicates$Var1),]
+removed.duplicates <- removed.duplicates[!grepl("^and$", removed.duplicates$Var1),]
+removed.duplicates <- removed.duplicates[!grepl("^a$", removed.duplicates$Var1),]
+removed.duplicates <- removed.duplicates[!grepl("^that$", removed.duplicates$Var1),]
+removed.duplicates <- removed.duplicates[!grepl("^in$", removed.duplicates$Var1),]
+removed.duplicates <- removed.duplicates[!grepl("^your$", removed.duplicates$Var1),]
+removed.duplicates <- removed.duplicates[!grepl("^be$", removed.duplicates$Var1),]
+removed.duplicates <- removed.duplicates[!grepl("^of$", removed.duplicates$Var1),]
+removed.duplicates <- removed.duplicates[!grepl("^on$", removed.duplicates$Var1),]
+removed.duplicates <- removed.duplicates[!grepl("^it$", removed.duplicates$Var1),]
+removed.duplicates <- removed.duplicates[!grepl("^from$", removed.duplicates$Var1),]
+removed.duplicates <- removed.duplicates[!grepl("^to$", removed.duplicates$Var1),]
+removed.duplicates <- removed.duplicates[!grepl("^[0-9]+$", removed.duplicates$Var1),]
+removed.duplicates <- removed.duplicates[!grepl("^[0-9]+[a-zA-z]+$", removed.duplicates$Var1),]
+removed.duplicates <- removed.duplicates[!grepl("^[0-9]+[a-zA-z]+[0-9]+$", removed.duplicates$Var1),]
+removed.duplicates <- removed.duplicates[!grepl("^[a-zA-z]+[0-9]+$", removed.duplicates$Var1),]
+removed.duplicates <- removed.duplicates[!grepl("^$", removed.duplicates$Var1),]
+removed.duplicates <- removed.duplicates[-(1:83),]
+
+
+#Adding each lyric from each song into one data frame
+final.words <- data.frame(Word = character(0), TotalFrequency = numeric(0),stringsAsFactors = FALSE)
+final.words[1, ] <- removed.duplicates[1, ]
+count <- 1
+for(i in 2:529605){
+    if(isTRUE(removed.duplicates[i-1,1] == removed.duplicates[i,1])){
+        final.words[count,2]<- final.words[count,2] + removed.duplicates[i,2]
+    }else{
+      count <- count + 1
+      final.words[count,] <- removed.duplicates[i,]
+    }
+}
+
+#Ordering by highest frequency
+final.words <- final.words[order(-final.words$TotalFrequency),]
+
+#word cloud
+final.wordcloud <- final.words[1:1000,1]
+write.table(final.wordcloud, "C:/Users/Erin Canada/Documents/USF/Spring 2017/Intro to R/Final Project/finalwordcloud.txt", sep="\t")
+
+text <- readLines(file.choose("finalwordcloud.txt"))
+docs <- Corpus(VectorSource(text))
+inspect(docs)
+
+toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
+docs <- tm_map(docs, toSpace, "/")
+docs <- tm_map(docs, toSpace, "@")
+docs <- tm_map(docs, toSpace, "\\|")
+
+# Convert the text to lower case
+docs <- tm_map(docs, content_transformer(tolower))
+# Remove numbers
+docs <- tm_map(docs, removeNumbers)
+# Remove english common stopwords
+docs <- tm_map(docs, removeWords, stopwords("english"))
+# Remove punctuations
+docs <- tm_map(docs, removePunctuation)
+# Eliminate extra white spaces
+docs <- tm_map(docs, stripWhitespace)
+# Text stemming
+docs <- tm_map(docs, stemDocument)
+
+
+dtm <- TermDocumentMatrix(docs)
+m <- as.matrix(dtm)
+v <- sort(rowSums(m),decreasing=TRUE)
+d <- data.frame(word = names(v),freq=v)
+
+
+set.seed(1234)
+wordcloud2(d,shape ="cartoid")
+finalwordcloud <- wordcloud(words = d$word, freq = d$freq, 
+          min.freq = 1,
+          max.words = 500, 
+          random.order = FALSE, 
+          rot.per = .45, 
+          colors = brewer.pal(6, "PRGn"))
+
+```
+#Who was the top artist of the last 50 years?-Artist
+```{r artist, echo = TRUE, eval = FALSE}
+
+#number of songs produced by each artist... how many were one hit wonders?!
+#removing "featuring" to get acurate main artists
+
+for(i in seq_along(my.data[,3])){
+   my.data[i,3] <- sub("featuring.*","", my.data[i,3])
+}
+b <- as.data.frame(table(my.data[,3]), stringsAsFactors = FALSE)
+
+#ordering from highest number of songs per artist to lowest
+b <- b[order(-b$Freq),]
+
+
+
+#one hit wonders
+c <- which(b[[2]] == 1)
+one.hit.wonders<- c()
+for(i in seq_along(c)){
+  one.hit.wonders[i] <- b[c[i],1]
+}
+
+
+
+#who produced the most per per decade? 
+x <- 1
+y <- 1000
+artist.perdecade <- data.frame()
+for(i in 1:5){
+  artist1965 <- as.data.frame(table(my.data[x:y,3]), stringsAsFactors = FALSE)
+  artist1965 <- artist1965[order(-artist1965$Freq),]
+  if(i == 1){
+    artist.perdecade <- artist1965[1,]
+  }else{
+    artist.perdecade <- rbind(artist.perdecade, artist1965[1,])
+  }
+  x <- x + 1000
+  y <- y + 1000
+}
+decade <- c(1965,1975,1985,1995,2005)
+artist.perdecade <- cbind(artist.perdecade,decade)
+rename(artist.perdecade, c("Var1"="Artist", "decade"="Decade"))
+
+#Artist per decade graph
+ggplot(data = artist.perdecade) +
+  geom_point(aes(x = artist.perdecade$Var1, y = decade, size = 19, color = Freq, show.legend = TRUE))+
+  ggtitle("Artist Per Decade") + xlab("Artist")+ ylab("Decade") +coord_flip()
+
+
+
+#length of career in top 100?
+  # how many years does each artist appear in a row
+  top.five <- data.frame(Artist = c("Madonna","Elton John","Mariah Carey","Janet Jackson","Michael Jackson"), Rank = c(1,2,3,4,5), CareerStart = c(1984,1972,1990,1986,1972), CareerEnd = c(2008,1998,2013,2001,2002), CareerLength = c(24,26,23,15,30),stringsAsFactors = FALSE)
+  # madonna  1984-2008
+  #elton 1972-1998
+  #mariah 1990-2013
+  #janet 1986-2001
+  #michael#1972-2002
+
+#Career Length vs Rank of top five artist 
+ ggplot(top.five, aes(ymin = 0)) + 
+    geom_rect(aes(xmin =Rank, xmax = Rank, ymax = CareerLength,size = 2 ,colour = Artist, fill = Artist))+
+      xlab("RANK") + ylab("CAREER LENGTH") + coord_flip()
+ 
+  
+  
+#number 1 songs of each year  
+top.songs <- subset(my.data[,1:4], Rank ==1)
+
+#each artist only appears once!
+top.songs.artist <- as.data.frame(table(top.songs[,3]), stringsAsFactors = FALSE)
+top.songs.artist <- top.songs.artist[order(-top.songs.artist$Freq),]
+
+
+
+
+
+  
+##Madonna Word cloud
+madonnaword <- subset(my.data[,5], my.data$Artist == "madonna")
+madonnalyrics <- c()
+for(i in seq_along(madonnaword)) {
+  madonnalyrics[i] <- strsplit(madonnaword[i], " ")
+}
+
+#Creating data frame with frequency of each word madonna used
+  controlmadonna <- data.frame()
+  for(i in seq_along(madonnalyrics)) {
+    if(i >= 2) {
+      temp <- as.data.frame(table(madonnalyrics[i]))
+      controlmadonna <- rbind(controlmadonna,temp)
+    }else{
+      controlmadonna <- as.data.frame(table(madonnalyrics[i]), stringsAsFactors = FALSE)
+    }
+  }
+#ordering to highest frequency  
+controlmadonna <- controlmadonna[order(-controlmadonna$Freq),]
+
+
+#Madonna word cloud
+madonna.wordcloud <- controlmadonna[1:1000,1]
+write.table(madonna.wordcloud, "C:/Users/Erin Canada/Documents/USF/Spring 2017/Intro to R/Final Project/madonnawordcloud.txt", sep="\t")
+
+text <- readLines(file.choose("madonnawordcloud.txt"))
+docs <- Corpus(VectorSource(text))
+inspect(docs)
+
+toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
+docs <- tm_map(docs, toSpace, "/")
+docs <- tm_map(docs, toSpace, "@")
+docs <- tm_map(docs, toSpace, "\\|")
+
+# Convert the text to lower case
+docs <- tm_map(docs, content_transformer(tolower))
+# Remove numbers
+docs <- tm_map(docs, removeNumbers)
+# Remove english common stopwords
+docs <- tm_map(docs, removeWords, stopwords("english"))
+# Remove punctuations
+docs <- tm_map(docs, removePunctuation)
+# Eliminate extra white spaces
+docs <- tm_map(docs, stripWhitespace)
+# Text stemming
+docs <- tm_map(docs, stemDocument)
+
+
+dtm <- TermDocumentMatrix(docs)
+m <- as.matrix(dtm)
+v <- sort(rowSums(m),decreasing=TRUE)
+d <- data.frame(word = names(v),freq=v)
+
+
+
+
+wordcloud2(d, figPath = "C:/Users/Erin Canada/Documents/USF/Spring 2017/Intro to R/Final Project/madonna4.jpg")
+letterCloud(d, word= "MADONNA")
+set.seed(1234)
+madonna.wordcloud <- wordcloud(words = d$word, freq = d$freq, 
+          min.freq = 1,
+          max.words = 150, 
+          random.order = FALSE, 
+          rot.per = .35, 
+          colors = brewer.pal(9, "PRGn"))
+
+```
+
+
+#Predicting model for future top 100?
+#Song reviews <- arists? feeling? musical changes? what did people say about them
+
+
+
